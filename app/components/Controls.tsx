@@ -1,33 +1,7 @@
-import { Dispatch, SetStateAction, useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { SendIcon } from "./icons/SendIcon";
 import { useNowPlaying } from "react-nowplaying";
 import TextInput from "./TextInput";
-
-// Types for browser support
-interface BrowserSupport {
-  hasTTS: boolean;
-  hasSTT: boolean;
-  isSupported: boolean;
-}
-
-// Types
-type Mode = 'tts' | 'stt';
-
-interface VoiceOption {
-  value: string;
-  label: string;
-  lang?: string;
-  default?: boolean;
-}
-
-interface LanguageOption {
-  value: string;
-  label: string;
-}
-
-interface ControlsProps {
-  callback: Dispatch<SetStateAction<any>>;
-}
 
 // Fallback implementations for unsupported browsers
 const FallbackTTS = {
@@ -47,27 +21,27 @@ const FallbackSTT = {
   onError: () => {}
 };
 
-const Controls: React.FC<ControlsProps> = ({ callback }) => {
-  const [mode, setMode] = useState<Mode>('tts');
-  const [text, setText] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [browserSupport, setBrowserSupport] = useState<BrowserSupport>({
-    hasTTS: false,
-    hasSTT: false,
-    isSupported: false
-  });
+const Controls = ({ callback }: { callback: any }) => {
+  const [mode, setMode] = useState<'tts' | 'stt'>('tts');
+  const [text, setText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  
+  // Use separate states instead of a single object to avoid typing issues
+  const [hasTTS, setHasTTS] = useState(false);
+  const [hasSTT, setHasSTT] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
   
   // TTS States
-  const [voices, setVoices] = useState<VoiceOption[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<string>("");
-  const [rate, setRate] = useState<number>(1);
-  const [pitch, setPitch] = useState<number>(1);
-  const [volume, setVolume] = useState<number>(1);
+  const [voices, setVoices] = useState<{ value: string; label: string; default?: boolean }[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState("");
+  const [rate, setRate] = useState(1);
+  const [pitch, setPitch] = useState(1);
+  const [volume, setVolume] = useState(1);
 
   // STT States
-  const [languages, setLanguages] = useState<LanguageOption[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>("en-US");
+  const [languages, setLanguages] = useState<{ value: string; label: string }[]>([]);
+  const [selectedLanguage, setSelectedLanguage] = useState("en-US");
   
   const sttRef = useRef<any>(null);
   const ttsRef = useRef<any>(null);
@@ -76,18 +50,20 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
 
   // Check browser support only on client side
   useEffect(() => {
-    const checkBrowserSupport = (): BrowserSupport => {
-      // Ensure we're in a browser environment
+    const checkBrowserSupport = () => {
       if (typeof window === 'undefined') {
-        return { hasTTS: false, hasSTT: false, isSupported: false };
+        return;
       }
       
-      const hasTTS = 'speechSynthesis' in window;
-      const hasSTT = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
-      return { hasTTS, hasSTT, isSupported: hasTTS || hasSTT };
+      const ttsSupported = 'speechSynthesis' in window;
+      const sttSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+      
+      setHasTTS(ttsSupported);
+      setHasSTT(sttSupported);
+      setIsSupported(ttsSupported || sttSupported);
     };
 
-    setBrowserSupport(checkBrowserSupport());
+    checkBrowserSupport();
   }, []);
 
   // Request microphone permission
@@ -106,8 +82,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
   // Initialize services with fallbacks
   useEffect(() => {
     const initializeServices = async () => {
-      // TypeScript now knows browserSupport is always BrowserSupport type
-      if (!browserSupport.isSupported) {
+      if (!isSupported) {
         console.warn("Web Speech API not fully supported, using fallbacks");
         sttRef.current = FallbackSTT;
         ttsRef.current = FallbackTTS;
@@ -116,14 +91,14 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
 
       try {
         // Dynamic imports to avoid errors in unsupported browsers
-        if (browserSupport.hasTTS) {
+        if (hasTTS) {
           const { TextToSpeech, speakText } = await import("../services/web-speech-tts");
           ttsRef.current = new TextToSpeech();
         } else {
           ttsRef.current = FallbackTTS;
         }
 
-        if (browserSupport.hasSTT) {
+        if (hasSTT) {
           const { SpeechToText } = await import("../services/web-speech-stt");
           sttRef.current = new SpeechToText();
         } else {
@@ -138,7 +113,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
       }
     };
 
-    if (browserSupport.isSupported) {
+    if (isSupported) {
       initializeServices();
     } else {
       // Set fallbacks immediately if not supported
@@ -154,12 +129,12 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
         ttsRef.current.stop();
       }
     };
-  }, [browserSupport]);
+  }, [isSupported, hasTTS, hasSTT]);
 
   // Load voices and languages
   useEffect(() => {
     const loadData = async () => {
-      if (!browserSupport.isSupported) {
+      if (!isSupported) {
         // Fallback data for unsupported browsers
         setVoices([{ value: "default", label: "Default Voice" }]);
         setLanguages([{ value: "en-US", label: "English (US)" }]);
@@ -167,7 +142,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
       }
 
       try {
-        if (browserSupport.hasTTS) {
+        if (hasTTS) {
           const { getAvailableVoices } = await import("../services/web-speech-tts");
           const availableVoices = await getAvailableVoices();
           setVoices(availableVoices);
@@ -180,7 +155,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
           setVoices([{ value: "default", label: "Default Voice" }]);
         }
 
-        if (browserSupport.hasSTT) {
+        if (hasSTT) {
           const { getSupportedLanguages } = await import("../services/web-speech-stt");
           const availableLanguages = await getSupportedLanguages();
           setLanguages(availableLanguages);
@@ -195,10 +170,10 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
       }
     };
     
-    if (browserSupport.isSupported) {
+    if (isSupported) {
       loadData();
     }
-  }, [browserSupport]);
+  }, [isSupported, hasTTS, hasSTT]);
 
   // TTS: Convert text to speech
   const handleTextToSpeech = useCallback(async () => {
@@ -208,7 +183,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
       setIsLoading(true);
       stopAudio();
 
-      if (!browserSupport.hasTTS) {
+      if (!hasTTS) {
         FallbackTTS.speak({ text: text.trim() });
         return;
       }
@@ -232,11 +207,11 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [text, selectedVoice, rate, pitch, volume, selectedLanguage, browserSupport, stopAudio]);
+  }, [text, selectedVoice, rate, pitch, volume, selectedLanguage, hasTTS, stopAudio]);
 
   // STT: Start recording
   const startRecording = useCallback(async () => {
-    if (!browserSupport.hasSTT) {
+    if (!hasSTT) {
       FallbackSTT.startRecognition();
       return;
     }
@@ -303,7 +278,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
       alert("Speech recognition failed. Please try again.");
       setIsRecording(false);
     }
-  }, [selectedLanguage, browserSupport]);
+  }, [selectedLanguage, hasSTT]);
 
   // STT: Stop recording
   const stopRecording = useCallback(() => {
@@ -322,7 +297,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
     }
   }, [mode, handleTextToSpeech]);
 
-  const handleModeChange = useCallback((newMode: Mode) => {
+  const handleModeChange = useCallback((newMode: 'tts' | 'stt') => {
     if (newMode !== mode) {
       if (mode === 'stt' && isRecording) {
         stopRecording();
@@ -335,7 +310,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
   }, [mode, isRecording, stopRecording]);
 
   // Show loading state while checking browser support
-  if (!browserSupport.isSupported && browserSupport.hasTTS === false && browserSupport.hasSTT === false) {
+  if (!isSupported && !hasTTS && !hasSTT) {
     return (
       <div className="relative space-y-6">
         <div className="flex justify-center">
@@ -360,7 +335,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
   }
 
   // Show browser support warning if neither TTS nor STT is supported
-  if (!browserSupport.isSupported) {
+  if (!isSupported) {
     return (
       <div className="relative space-y-6">
         <div className="flex justify-center">
@@ -438,7 +413,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
       </div>
 
       {/* TTS Controls */}
-      {mode === 'tts' && browserSupport.hasTTS && (
+      {mode === 'tts' && hasTTS && (
         <div className="flex flex-wrap gap-4 items-center justify-center p-4 bg-gray-900 rounded-lg">
           <div className="flex flex-col gap-2">
             <label className="text-sm text-gray-300">Voice</label>
@@ -497,7 +472,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
       )}
 
       {/* STT Controls */}
-      {mode === 'stt' && browserSupport.hasSTT && (
+      {mode === 'stt' && hasSTT && (
         <div className="flex flex-wrap gap-4 items-center justify-center p-4 bg-gray-900 rounded-lg">
           <div className="flex flex-col gap-2">
             <label className="text-sm text-gray-300">Language</label>
@@ -517,7 +492,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
       )}
 
       {/* Feature Not Available Warning */}
-      {mode === 'tts' && !browserSupport.hasTTS && (
+      {mode === 'tts' && !hasTTS && (
         <div className="text-center p-4 bg-yellow-900/50 rounded-lg border border-yellow-700">
           <div className="text-yellow-300 text-sm">
             Text-to-Speech not available in this browser. Try Chrome or Edge.
@@ -525,7 +500,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
         </div>
       )}
 
-      {mode === 'stt' && !browserSupport.hasSTT && (
+      {mode === 'stt' && !hasSTT && (
         <div className="text-center p-4 bg-yellow-900/50 rounded-lg border border-yellow-700">
           <div className="text-yellow-300 text-sm">
             Speech-to-Text not available in this browser. Try Chrome or Edge.
@@ -560,8 +535,8 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
             disabled={
               isLoading || 
               (mode === 'tts' && !text?.trim()) ||
-              (mode === 'tts' && !browserSupport.hasTTS) ||
-              (mode === 'stt' && !browserSupport.hasSTT)
+              (mode === 'tts' && !hasTTS) ||
+              (mode === 'stt' && !hasSTT)
             }
             className={`w-16 md:w-24 h-full py-2 md:py-4 px-2 rounded-tr-[2rem] rounded-br-[2rem] font-bold bg-[#101014] text-light-900 text-sm sm:text-base flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
               isRecording ? 'animate-pulse bg-red-500' : ''
@@ -593,15 +568,15 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
       <div className="text-center space-y-2">
         <div className="text-xs text-gray-500 bg-gray-800 px-3 py-1 rounded-full inline-block">
           {mode === 'tts' ? '🔊 Web Speech API' : '🎤 Web Speech API'}
-          {!browserSupport.hasTTS && mode === 'tts' && ' (Fallback Mode)'}
-          {!browserSupport.hasSTT && mode === 'stt' && ' (Fallback Mode)'}
+          {!hasTTS && mode === 'tts' && ' (Fallback Mode)'}
+          {!hasSTT && mode === 'stt' && ' (Fallback Mode)'}
         </div>
         
         {/* Browser Support Info - Only show if there are limitations */}
-        {(browserSupport.hasTTS && !browserSupport.hasSTT) || (!browserSupport.hasTTS && browserSupport.hasSTT) ? (
+        {(hasTTS && !hasSTT) || (!hasTTS && hasSTT) ? (
           <div className="text-xs text-gray-600">
-            {!browserSupport.hasTTS && 'Text-to-Speech not supported • '}
-            {!browserSupport.hasSTT && 'Speech-to-Text not supported'}
+            {!hasTTS && 'Text-to-Speech not supported • '}
+            {!hasSTT && 'Speech-to-Text not supported'}
           </div>
         ) : null}
       </div>
