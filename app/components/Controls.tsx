@@ -3,9 +3,18 @@ import { SendIcon } from "./icons/SendIcon";
 import { useNowPlaying } from "react-nowplaying";
 import TextInput from "./TextInput";
 
+// Types for browser support
+interface BrowserSupport {
+  hasTTS: boolean;
+  hasSTT: boolean;
+  isSupported: boolean;
+}
+
 // Check browser support at module level
-const isSpeechSupported = () => {
-  if (typeof window === 'undefined') return false;
+const isSpeechSupported = (): BrowserSupport => {
+  if (typeof window === 'undefined') {
+    return { hasTTS: false, hasSTT: false, isSupported: false };
+  }
   
   const hasTTS = 'speechSynthesis' in window;
   const hasSTT = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
@@ -57,7 +66,7 @@ const Controls: React.FC<ControlsProps> = ({ callback }) => {
   const [text, setText] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [browserSupport, setBrowserSupport] = useState(speechSupport);
+  const [browserSupport, setBrowserSupport] = useState<BrowserSupport>(speechSupport);
   
   // TTS States
   const [voices, setVoices] = useState<VoiceOption[]>([]);
