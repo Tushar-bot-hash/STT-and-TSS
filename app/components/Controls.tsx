@@ -51,6 +51,11 @@ const Controls = ({ callback }) => {
   // Check browser support only on client side
   useEffect(() => {
     const checkBrowserSupport = () => {
+      // Ensure we're in a browser environment
+      if (typeof window === 'undefined') {
+        return { hasTTS: false, hasSTT: false, isSupported: false };
+      }
+      
       const hasTTS = 'speechSynthesis' in window;
       const hasSTT = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
       return { hasTTS, hasSTT, isSupported: hasTTS || hasSTT };
@@ -75,7 +80,8 @@ const Controls = ({ callback }) => {
   // Initialize services with fallbacks
   useEffect(() => {
     const initializeServices = async () => {
-      if (!browserSupport.isSupported) {
+      // Always check if browserSupport exists and has the property
+      if (!browserSupport || !browserSupport.isSupported) {
         console.warn("Web Speech API not fully supported, using fallbacks");
         sttRef.current = FallbackSTT;
         ttsRef.current = FallbackTTS;
@@ -106,8 +112,13 @@ const Controls = ({ callback }) => {
       }
     };
 
-    if (browserSupport.isSupported) {
+    // Only initialize if browserSupport is properly set
+    if (browserSupport && browserSupport.isSupported) {
       initializeServices();
+    } else {
+      // Set fallbacks immediately if not supported
+      sttRef.current = FallbackSTT;
+      ttsRef.current = FallbackTTS;
     }
 
     return () => {
@@ -123,7 +134,7 @@ const Controls = ({ callback }) => {
   // Load voices and languages
   useEffect(() => {
     const loadData = async () => {
-      if (!browserSupport.isSupported) {
+      if (!browserSupport || !browserSupport.isSupported) {
         // Fallback data for unsupported browsers
         setVoices([{ value: "default", label: "Default Voice" }]);
         setLanguages([{ value: "en-US", label: "English (US)" }]);
@@ -159,7 +170,7 @@ const Controls = ({ callback }) => {
       }
     };
     
-    if (browserSupport.isSupported) {
+    if (browserSupport && browserSupport.isSupported) {
       loadData();
     }
   }, [browserSupport]);
@@ -172,7 +183,7 @@ const Controls = ({ callback }) => {
       setIsLoading(true);
       stopAudio();
 
-      if (!browserSupport.hasTTS) {
+      if (!browserSupport || !browserSupport.hasTTS) {
         FallbackTTS.speak({ text: text.trim() });
         return;
       }
@@ -200,7 +211,7 @@ const Controls = ({ callback }) => {
 
   // STT: Start recording
   const startRecording = useCallback(async () => {
-    if (!browserSupport.hasSTT) {
+    if (!browserSupport || !browserSupport.hasSTT) {
       FallbackSTT.startRecognition();
       return;
     }
@@ -298,8 +309,13 @@ const Controls = ({ callback }) => {
     setMode(newMode);
   }, [mode, isRecording, stopRecording]);
 
+  // Safe access to browserSupport properties
+  const isSupported = browserSupport && browserSupport.isSupported;
+  const hasTTS = browserSupport && browserSupport.hasTTS;
+  const hasSTT = browserSupport && browserSupport.hasSTT;
+
   // Show loading state while checking browser support
-  if (!browserSupport.isSupported && browserSupport.hasTTS === false && browserSupport.hasSTT === false) {
+  if (!isSupported && hasTTS === false && hasSTT === false) {
     return (
       <div className="relative space-y-6">
         <div className="flex justify-center">
@@ -324,7 +340,7 @@ const Controls = ({ callback }) => {
   }
 
   // Show browser support warning if neither TTS nor STT is supported
-  if (!browserSupport.isSupported) {
+  if (!isSupported) {
     return (
       <div className="relative space-y-6">
         <div className="flex justify-center">
@@ -402,7 +418,7 @@ const Controls = ({ callback }) => {
       </div>
 
       {/* TTS Controls */}
-      {mode === 'tts' && browserSupport.hasTTS && (
+      {mode === 'tts' && hasTTS && (
         <div className="flex flex-wrap gap-4 items-center justify-center p-4 bg-gray-900 rounded-lg">
           <div className="flex flex-col gap-2">
             <label className="text-sm text-gray-300">Voice</label>
@@ -461,7 +477,7 @@ const Controls = ({ callback }) => {
       )}
 
       {/* STT Controls */}
-      {mode === 'stt' && browserSupport.hasSTT && (
+      {mode === 'stt' && hasSTT && (
         <div className="flex flex-wrap gap-4 items-center justify-center p-4 bg-gray-900 rounded-lg">
           <div className="flex flex-col gap-2">
             <label className="text-sm text-gray-300">Language</label>
@@ -481,7 +497,7 @@ const Controls = ({ callback }) => {
       )}
 
       {/* Feature Not Available Warning */}
-      {mode === 'tts' && !browserSupport.hasTTS && (
+      {mode === 'tts' && !hasTTS && (
         <div className="text-center p-4 bg-yellow-900/50 rounded-lg border border-yellow-700">
           <div className="text-yellow-300 text-sm">
             Text-to-Speech not available in this browser. Try Chrome or Edge.
@@ -489,7 +505,7 @@ const Controls = ({ callback }) => {
         </div>
       )}
 
-      {mode === 'stt' && !browserSupport.hasSTT && (
+      {mode === 'stt' && !hasSTT && (
         <div className="text-center p-4 bg-yellow-900/50 rounded-lg border border-yellow-700">
           <div className="text-yellow-300 text-sm">
             Speech-to-Text not available in this browser. Try Chrome or Edge.
@@ -524,8 +540,8 @@ const Controls = ({ callback }) => {
             disabled={
               isLoading || 
               (mode === 'tts' && !text?.trim()) ||
-              (mode === 'tts' && !browserSupport.hasTTS) ||
-              (mode === 'stt' && !browserSupport.hasSTT)
+              (mode === 'tts' && !hasTTS) ||
+              (mode === 'stt' && !hasSTT)
             }
             className={`w-16 md:w-24 h-full py-2 md:py-4 px-2 rounded-tr-[2rem] rounded-br-[2rem] font-bold bg-[#101014] text-light-900 text-sm sm:text-base flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
               isRecording ? 'animate-pulse bg-red-500' : ''
@@ -557,15 +573,15 @@ const Controls = ({ callback }) => {
       <div className="text-center space-y-2">
         <div className="text-xs text-gray-500 bg-gray-800 px-3 py-1 rounded-full inline-block">
           {mode === 'tts' ? '🔊 Web Speech API' : '🎤 Web Speech API'}
-          {!browserSupport.hasTTS && mode === 'tts' && ' (Fallback Mode)'}
-          {!browserSupport.hasSTT && mode === 'stt' && ' (Fallback Mode)'}
+          {!hasTTS && mode === 'tts' && ' (Fallback Mode)'}
+          {!hasSTT && mode === 'stt' && ' (Fallback Mode)'}
         </div>
         
         {/* Browser Support Info - Only show if there are limitations */}
-        {(browserSupport.hasTTS && !browserSupport.hasSTT) || (!browserSupport.hasTTS && browserSupport.hasSTT) ? (
+        {(hasTTS && !hasSTT) || (!hasTTS && hasSTT) ? (
           <div className="text-xs text-gray-600">
-            {!browserSupport.hasTTS && 'Text-to-Speech not supported • '}
-            {!browserSupport.hasSTT && 'Speech-to-Text not supported'}
+            {!hasTTS && 'Text-to-Speech not supported • '}
+            {!hasSTT && 'Speech-to-Text not supported'}
           </div>
         ) : null}
       </div>
