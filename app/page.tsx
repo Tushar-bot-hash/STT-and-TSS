@@ -7,57 +7,44 @@ import { LinkedInIcon } from "./components/icons/LinkedInIcon";
 import { FacebookIcon } from "./components/icons/FacebookIcon";
 import GitHubButton from "react-github-btn";
 
+
 const Home = () => {
   return (
     <>
       <div className="h-full overflow-hidden">
-        {/* height 4rem */}
+        {/* Header */}
         <div className="bg-gradient-to-b from-black/50 to-black/10 backdrop-blur-[2px] h-[4rem] flex items-center">
           <header className="mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8 flex items-center justify-between">
             <div>
               <a className="flex items-center" href="/">
-                <Image
-                  className="w-auto h-8 max-w-[12.5rem] sm:max-w-none"
-                  src="/deepgram.svg"
-                  alt="Deepgram Logo"
-                  width={0}
-                  height={0}
-                  priority
-                />
+                {/* Clean header without branding */}
+                <div className="text-white text-xl font-bold">
+                  🎯 Speech Tools
+                </div>
               </a>
             </div>
             <div className="flex items-center gap-6 text-sm">
               <span className="mt-1">
                 <GitHubButton
-                  href="https://github.com/deepgram-starters/nextjs-text-to-speech"
+                  href="https://github.com/your-username/speech-tools"  // Update to your repo
                   data-color-scheme="no-preference: light; light: light; dark: light;"
                   data-size="large"
                   data-show-count="true"
-                  aria-label="Star deepgram-starters/nextjs-text-to-speech on GitHub"
+                  aria-label="Star speech tools on GitHub"
                 >
                   Star
                 </GitHubButton>
-              </span>
-
-              <span className="gradient-shadow bg-gradient-to-r to-[#13EF93]/50 from-[#149AFB]/80 rounded">
-                <a
-                  href="https://console.deepgram.com/signup?jump=keys"
-                  target="_blank"
-                  className="hidden text-xs md:inline-block bg-black text-white rounded m-px px-8 py-2 font-semibold"
-                >
-                  Get an API Key
-                </a>
               </span>
             </div>
           </header>
         </div>
 
-        {/* height 100% minus 8rem */}
+        {/* Main Content */}
         <main className="mx-auto px-4 md:px-6 lg:px-8 h-[calc(100%-4rem)] -mb-[4rem]">
           <App />
         </main>
 
-        {/* height 4rem */}
+        {/* Footer */}
         <div className="bg-black/80 h-[4rem] flex items-center absolute w-full">
           <footer className="mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8 flex items-center justify-center gap-4 md:text-xl font-inter text-[#8a8a8e]">
             <span className="text-base text-[#4e4e52]">share it</span>
@@ -65,7 +52,7 @@ const Home = () => {
               href="#"
               onClick={(e) => {
                 window.open(
-                  "https://twitter.com/intent/tweet?text=%F0%9F%94%A5%F0%9F%8E%89%20Check%20out%20this%20awesome%20%23AI%20demo%20by%20%40Deepgram%20and%20%40lukeocodes%0A%0A%20https%3A//aura-tts-demo.deepgram.com",
+                  "https://twitter.com/intent/tweet?text=%F0%9F%94%A5%20Check%20out%20this%20awesome%20Speech%20Tools%20app%20for%20Text-to-Speech%20and%20Speech-to-Text%0A%0A%20https%3A//your-app-url.com",  // Update URL
                   "",
                   "_blank, width=600, height=500, resizable=yes, scrollbars=yes"
                 );
@@ -81,7 +68,7 @@ const Home = () => {
               href="#"
               onClick={(e) => {
                 window.open(
-                  "https://www.linkedin.com/shareArticle?mini=true&url=https%3A//aura-tts-demo.deepgram.com&title=Excellent review on my website reviews",
+                  "https://www.linkedin.com/shareArticle?mini=true&url=https%3A//your-app-url.com&title=Speech%20Tools%20-%20Text-to-Speech%20%26%20Speech-to-Text",  // Update URL and title
                   "",
                   "_blank, width=600, height=500, resizable=yes, scrollbars=yes"
                 );
@@ -96,7 +83,7 @@ const Home = () => {
               href="#"
               onClick={(e) => {
                 window.open(
-                  "https://www.facebook.com/sharer/sharer.php?u=https%3A//aura-tts-demo.deepgram.com",
+                  "https://www.facebook.com/sharer/sharer.php?u=https%3A//your-app-url.com",  // Update URL
                   "",
                   "_blank, width=600, height=500, resizable=yes, scrollbars=yes"
                 );
@@ -111,13 +98,15 @@ const Home = () => {
             <div className="border-l border-[#4e4e52] w-px h-7">&nbsp;</div>
             <a
               className="text-base font-semibold"
-              href="https://deepgram.com/contact-us"
+              href="mailto:your-email@example.com"  // Your contact email
               target="_blank"
             >
               contact us
             </a>
           </footer>
         </div>
+
+        {/* Remove the powered by badge completely */}
       </div>
     </>
   );
