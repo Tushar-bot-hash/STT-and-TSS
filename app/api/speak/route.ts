@@ -1,4 +1,4 @@
-import { createClient } from "@deepgram/sdk";
+
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -29,7 +29,7 @@ export const revalidate = 0;
 export async function POST(request: NextRequest) {
   // gotta use the request object to invalidate the cache every request :vomit:
   const url = request.url;
-  const deepgram = createClient(process.env.DEEPGRAM_API_KEY ?? "");
+  
 
   // Get the voice model from query params, default to aura-2-thalia-en
   const model = request.nextUrl.searchParams.get("model") ?? "aura-2-thalia-en";
@@ -40,10 +40,8 @@ export async function POST(request: NextRequest) {
   console.log("TTS Request:", { model, text: message.text?.substring(0, 50) + "..." });
 
   // Make the request to Deepgram
-  const result = await deepgram.speak.request(message, { model });
-  const stream = await result.getStream();
-  const headers = await result.getHeaders();
-
+  
+  
   // Return the audio stream with appropriate headers
   const response = new NextResponse(stream, { headers });
 
