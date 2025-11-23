@@ -82,7 +82,7 @@ const Controls = ({ callback }: { callback: any }) => {
   // Initialize services with fallbacks
   useEffect(() => {
     const initializeServices = async () => {
-      if (!isSupported) {
+      if (!isSupported) {  // FIXED: Changed from browserSupport.isSupported to isSupported
         console.warn("Web Speech API not fully supported, using fallbacks");
         sttRef.current = FallbackSTT;
         ttsRef.current = FallbackTTS;
